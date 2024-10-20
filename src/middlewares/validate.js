@@ -8,7 +8,7 @@ export const validate = (schema) => {
 
         if (req.file || req.files) {
             imageKey = req.files ? 'images' : 'image';
-            imageValue = req.files ? req.files : req.file; 
+            imageValue = req.files ? req.files.images : req.file; 
         }
 
         const dataToValidate = { ...req.body, ...req.params, ...req.query };

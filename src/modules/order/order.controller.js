@@ -73,7 +73,7 @@ export const createCheckoutSession = async (req, res, next) => {
             {
                 price_data:{
                     currency: 'egp',
-                    unit_amount: cart.totalCartPriceAfterDiscount * 100,
+                    unit_amount: Math.round(TotalPrice.toFixed(2) * 100),
                     product_data:{
                         name: req.user.name,
                     }
@@ -85,6 +85,7 @@ export const createCheckoutSession = async (req, res, next) => {
         success_url:"https://www.youtube.com/playlist?list=PLCInYL3l2AagY7fFlhCrjpLiIFybW3yQv",
         cancel_url:"https://docs.stripe.com/keys",
         customer_email: req.user.email,
+        metadata: req.body.address,
         client_reference_id:req.params.id,
     })
     
