@@ -14,7 +14,7 @@ export const createCart = async (req, res, next) => {
     if (!product) {
         return next(new AppError("Product not found", 404));
     }
-    req.body.price = product.price;
+    req.body.price = product.priceAfterDiscount ? product.priceAfterDiscount : product.price;
     //check quantity if product first time to add to the cart 
     if (req.body.quantity > product.stock) {
         return next(new AppError(`Quantity exceeds stock only we have ${product.stock}`, 400));
