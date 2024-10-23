@@ -73,7 +73,7 @@ export const createCheckoutSession = async (req, res, next) => {
             {
                 price_data:{
                     currency: 'egp',
-                    unit_amount: Math.round(TotalPrice.toFixed(2) * 100),
+                    unit_amount: Math.round(cart.totalCartPriceAfterDiscount.toFixed(2) * 100),
                     product_data:{
                         name: req.user.name,
                     }
@@ -92,3 +92,50 @@ export const createCheckoutSession = async (req, res, next) => {
     res.status(200).json({ message: "success", session });
 }
 
+export const payByCard = async  (req, res, next) => {
+    console.log("hii");
+    
+    const sig = req.headers['stripe-signature'].toString();
+
+    let event;
+
+    event = stripe.webhooks.constructEvent(req.body, sig, "whsec_rzQAzsoSyYIl2rWvCw7FqhRAOzVAxGve");
+    let checkout
+    // Handle the event
+    if (event.type == 'checkout.session.completed') {
+        checkout = event.data.object;
+
+        let user = await User.findOne({ email: checkout.customer_email })
+        const cart = await Cart.findById(checkout.client_reference_id);
+        if (!cart) {
+            return next(new AppError("cart not found", 404))
+        }
+        const order = await Order.create({
+            user: user._id,
+            orderItems: cart.cartItems,
+            shippingAddress: checkout.metadata,
+            totalOrderPrice: checkout.amount_total / 100,
+            paymentType: "cart",
+            isPaid: true
+        })
+        await order.save();
+        // cart.cartItems.forEach(async (product, idx)=> {
+        //     let myProduct = await Product.findByIdAndUpdate(product.product, {
+        //         $inc: { stock: product.quantity*-1 },
+        //         $inc: { sold: product.quantity*1 },
+        //     })
+        // })
+        const options = cart.cartItems.map(product => {
+            return ({
+                updateOne: {
+                    "filter": { _id: product.product },
+                    "update": { $inc: { sold: 1 * product.quantity, stock: -1 * product.quantity } }
+                }
+            })
+        })
+        await Product.bulkWrite(options)
+        await Cart.findByIdAndDelete(cart._id);
+        res.status(200).json({ message: 'success', order });
+    }
+    res.status(200).json({ message: "success", checkout });
+}
